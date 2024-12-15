@@ -1,4 +1,7 @@
 import os
+from datetime import datetime
+
+ymd = datetime.now().strftime("%Y-%m-%d")
 
 # assorted utils to help refactor the daily aoc code 
 
@@ -46,8 +49,9 @@ def print_here():
     here_path = os.path.dirname(here)
     folders = here_path.split("/")
     final_folders = folders[-4:-1]
-    final_folders_path = "/".join(final_folders)
-    print( "AOC 2023: {}".format(final_folders_path))
+    final_folders_path = "/".join(final_folders)    
+
+    print( "AOC 2024: {}: {}".format(ymd, final_folders_path))
 
 coord_delta_by_direction = { # [direction 0-3] = coord (x,y)
     0: ( 1,  0), # e

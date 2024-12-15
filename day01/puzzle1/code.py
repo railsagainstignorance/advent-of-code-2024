@@ -51,5 +51,5 @@ def run():
 if __name__ == "__main__":
     run()
 
-# AOC 2023: day01/puzzle1/..
+# AOC 2024: day01/puzzle1/..
 # [{'total_distance': 2769675}]
