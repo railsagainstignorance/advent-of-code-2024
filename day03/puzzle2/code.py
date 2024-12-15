@@ -51,4 +51,6 @@ def run():
 if __name__ == "__main__":
     run()
 
+# AOC 2024: 2024-12-15: day03/puzzle2/..
 # [{'sum_muls': 93733733}] That's not the right answer; your answer is too high.
+# [{'sum_muls': 84893551}]
