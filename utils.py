@@ -53,14 +53,14 @@ def print_here():
 
     print( "AOC 2024: {}: {}".format(ymd, final_folders_path))
 
-coord_delta_by_direction = { # [direction 0-3] = coord (x,y)
+coord_delta_by_direction = { # [up+down direction 0-3] = coord (x,y)
     0: ( 1,  0), # e
     1: ( 0,  1), # s
     2: (-1,  0), # w
     3: ( 0, -1), # n
 }
 
-coord_delta_by_direction_with_diagonals = { # [direction 0-7] = coord (x,y)
+coord_delta_by_direction_with_diagonals = { # [up+down+diag direction 0-7] = coord (x,y)
     0: ( 1,  0), # e
     1: ( 1,  1), # se
     2: ( 0,  1), # s
@@ -69,6 +69,13 @@ coord_delta_by_direction_with_diagonals = { # [direction 0-7] = coord (x,y)
     5: (-1, -1), # nw
     6: ( 0, -1), # n
     7: ( 1, -1), # ne
+}
+
+coord_delta_by_direction_with_only_diagonals = { # [diag direction 0-3] = coord (x,y)
+    0: ( 1,  1), # se
+    1: (-1,  1), # sw
+    2: (-1, -1), # nw
+    3: ( 1, -1), # ne
 }
 
 def exercise_fn_with_cases( fn: callable, cases: list[dict], attrs: list[str]):
