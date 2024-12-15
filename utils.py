@@ -60,6 +60,17 @@ coord_delta_by_direction = { # [direction 0-3] = coord (x,y)
     3: ( 0, -1), # n
 }
 
+coord_delta_by_direction_with_diagonals = { # [direction 0-7] = coord (x,y)
+    0: ( 1,  0), # e
+    1: ( 1,  1), # se
+    2: ( 0,  1), # s
+    3: (-1,  1), # sw
+    4: (-1,  0), # w
+    5: (-1, -1), # nw
+    6: ( 0, -1), # n
+    7: ( 1, -1), # ne
+}
+
 def exercise_fn_with_cases( fn: callable, cases: list[dict], attrs: list[str]):
     """
     This function takes a function, a list of cases, and a list of attributes to check.
