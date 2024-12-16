@@ -1,5 +1,6 @@
 import os
 from datetime import datetime
+from timeit import default_timer as timer
 
 ymd = datetime.now().strftime("%Y-%m-%d")
 
@@ -90,22 +91,27 @@ def exercise_fn_with_cases( fn: callable, cases: list[dict], attrs: list[str], v
 
     for index, case in enumerate(cases):
         # print( "index={}".format(index) )
-        output = fn( case )
 
+        start = timer()
+        output = fn( case )
+        end = timer()
+
+        response_item = {}
         if attrs[0] in case:
             for v in attrs:
                 assert output[v] == case[v], "for case={}, expecting {}={}, but got {}".format(index, v, case[v], output[v] )
             # print( "index={} passed".format(index) )
         elif verbose:
-            response_item = {}
             for v in attrs:
                 # print( "index={} {}={}".format(index, v, output[v]) )
                 response_item[v] = output[v]
-            response.append( response_item )
         else:
             final_attr = attrs[-1]
-            response.append( { final_attr: output[final_attr] } )
-
+            response_item[final_attr] = output[final_attr]
+            response_item['elapsed_time_s'] = end - start
+    
+        if response_item != {}:
+            response.append( response_item )
     return response
 
 import unittest # https://docs.python.org/3/library/unittest.html
