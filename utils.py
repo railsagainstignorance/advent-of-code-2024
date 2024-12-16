@@ -78,30 +78,33 @@ coord_delta_by_direction_with_only_diagonals = { # [diag direction 0-3] = coord 
     3: ( 1, -1), # ne
 }
 
-def exercise_fn_with_cases( fn: callable, cases: list[dict], attrs: list[str]):
+def exercise_fn_with_cases( fn: callable, cases: list[dict], attrs: list[str], verbose=True):
     """
     This function takes a function, a list of cases, and a list of attributes to check.
     It then runs the function with each case.
     If the first specified attr is present, checks if the output matches the expected value for all the attrs.
+    verbose=False returnd only the final attr when the case did not specify the first attr (to trim display of final result)
     """
 
     response = []
 
     for index, case in enumerate(cases):
         # print( "index={}".format(index) )
-
         output = fn( case )
 
         if attrs[0] in case:
             for v in attrs:
                 assert output[v] == case[v], "for case={}, expecting {}={}, but got {}".format(index, v, case[v], output[v] )
             # print( "index={} passed".format(index) )
-        else:
+        elif verbose:
             response_item = {}
             for v in attrs:
                 # print( "index={} {}={}".format(index, v, output[v]) )
                 response_item[v] = output[v]
             response.append( response_item )
+        else:
+            final_attr = attrs[-1]
+            response.append( { final_attr: output[final_attr] } )
 
     return response
 
