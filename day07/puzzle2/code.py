@@ -18,8 +18,9 @@ cases = [
 192: 17 8 14
 21037: 9 7 18 13
 292: 11 6 16 20''',
-        'num_possibly_true_equations': 3,
-        'total_calibration_result': 3749,
+        'possibly_true_test_values': [190, 3267, 156, 7290, 192, 292],
+        'num_possibly_true_equations': 6,
+        'total_calibration_result': 11387,
     },
     {
         'input': "../puzzle1/input.txt"
@@ -27,6 +28,8 @@ cases = [
 ]
 
 attrs = [
+    'possibly_true_test_values',
+    'num_possibly_true_equations',
     'total_calibration_result'
     ]
 
@@ -43,7 +46,7 @@ def solve( case ):
             'numbers': numbers,
         })
 
-    operators = ['+', '*']
+    operators = ['+', '*', '||']
     
     def evaluate_equation( equation ):
         numbers = equation['numbers']
@@ -53,7 +56,13 @@ def solve( case ):
             next_partials = []
             for partial in partials:
                 for operator in operators:
-                    next_partials.append( eval( f"{partial} {operator} {num}") )
+                    next_partial = None
+                    if operator == '||':
+                        next_partial = int(str(partial) + str(num))
+                    else:
+                        next_partial = eval( f"{partial} {operator} {num}")
+
+                    next_partials.append( next_partial )
             partials = next_partials
         
         is_possibly_true_equation = (equation['test_value'] in partials)
@@ -61,14 +70,17 @@ def solve( case ):
     
     num_possibly_true_equations = 0
     total_calibration_result = 0
+    possibly_true_test_values = []
 
     for equation in equations:
         is_possibly_true_equation = evaluate_equation( equation )
         if is_possibly_true_equation:
             num_possibly_true_equations += 1
             total_calibration_result += equation['test_value']
+            possibly_true_test_values.append( equation['test_value'])
 
     return {
+        'possibly_true_test_values': possibly_true_test_values,
         'num_possibly_true_equations': num_possibly_true_equations,
         'total_calibration_result': total_calibration_result,
     }
@@ -82,5 +94,5 @@ def run():
 if __name__ == "__main__":
     run()
 
-# AOC 2024: 2024-12-16: day07/puzzle1/..
-# [{'total_calibration_result': 5540634308362, 'elapsed_time_s': 2.2116654999554157}]
+# AOC 2024: 2024-12-16: day07/puzzle2/..
+# [{'total_calibration_result': 472290821152397, 'elapsed_time_s': 74.26252545800526}]
