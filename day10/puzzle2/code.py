@@ -9,48 +9,30 @@ from utils import *
 cases = [
     {
         'input': '''\
-0123
-1234
-8765
-9876''',
+8888808
+8843218
+8858828
+8865438
+1171141
+1187651
+1191111''',
         'trailhead_scores': [1],
         'sum_trailhead_scores': 1,
+        'trailhead_ratings': [3],
+        'sum_trailhead_ratings': 3,
     },
     {
         'input': '''\
-1110111
-1111111
-1112111
-6543456
-7111117
-8111118
-9111119''',
+012345
+123456
+234567
+345678
+416789
+567891''',
         'trailhead_scores': [2],
         'sum_trailhead_scores': 2,
-    },
-    {
-        'input': '''\
-1190119
-1111198
-1112117
-6543456
-7651987
-8761111
-9871111''',
-        'trailhead_scores': [4],
-        'sum_trailhead_scores': 4,
-    },
-    {
-        'input': '''\
-1011911
-2111811
-3111711
-4567654
-1118113
-1119112
-1111101''',
-        'trailhead_scores': [1,2],
-        'sum_trailhead_scores': 3,
+        'trailhead_ratings': [121+106],
+        'sum_trailhead_ratings': 227,
     },
     {
         'input': '''\
@@ -64,6 +46,8 @@ cases = [
 10456732''',
         'trailhead_scores': [5, 6, 5, 3, 1, 3, 5, 3,5],
         'sum_trailhead_scores': 36,
+        'trailhead_ratings': [20, 24, 10, 4, 1, 4, 5, 8, 5],
+        'sum_trailhead_ratings': 81,
     },
     {
         'input': "../puzzle1/input.txt"
@@ -72,7 +56,9 @@ cases = [
 
 attrs = [
     'trailhead_scores',
-    'sum_trailhead_scores'
+    'sum_trailhead_scores',
+    'trailhead_ratings',
+    'sum_trailhead_ratings',
     ]
 
 def solve( case ):
@@ -90,9 +76,12 @@ def solve( case ):
             if int_yx_array[y][x] == 0:
                 trailhead_coords.append( (x, y) )
 
-    def find_trails_to_9s( x, y, known_9_coords_set: set):
+    def find_trails_to_9s( x, y, trail_counts_by_destination_coord: dict[str, int] ):
         if int_yx_array[y][x] == 9:
-            known_9_coords_set.add( (x, y) )
+            destination_coord = (x, y)
+            if not destination_coord in trail_counts_by_destination_coord:
+                trail_counts_by_destination_coord[destination_coord] = 0
+            trail_counts_by_destination_coord[destination_coord] += 1
             return
         height = int_yx_array[y][x]
         for direction in range(4):
@@ -102,21 +91,26 @@ def solve( case ):
             if new_x >= min_x and new_x < max_x and new_y >= min_y and new_y < max_y:
                 new_height = int_yx_array[new_y][new_x]
                 if new_height == height +1:
-                    find_trails_to_9s( new_x, new_y, known_9_coords_set )
+                    find_trails_to_9s( new_x, new_y, trail_counts_by_destination_coord )
 
     trailhead_scores = []
+    trailhead_ratings = []
 
     for trailhead_coord in trailhead_coords:
         x, y = trailhead_coord
-        known_9_coords_set = set()
-        find_trails_to_9s( x, y, known_9_coords_set )
-        trailhead_scores.append( len(known_9_coords_set) )
+        trail_counts_by_destination_coord = {}
+        find_trails_to_9s( x, y, trail_counts_by_destination_coord )
+        trailhead_scores.append( len(trail_counts_by_destination_coord) )
+        trailhead_ratings.append( sum(trail_counts_by_destination_coord.values()) )
 
     sum_trailhead_scores = sum(trailhead_scores)
+    sum_trailhead_ratings = sum(trailhead_ratings)
 
     return {
         'trailhead_scores': trailhead_scores,
-        'sum_trailhead_scores': sum_trailhead_scores
+        'sum_trailhead_scores': sum_trailhead_scores,
+        'trailhead_ratings': trailhead_ratings,
+        'sum_trailhead_ratings': sum_trailhead_ratings,
     }
 
 def run():
@@ -128,5 +122,5 @@ def run():
 if __name__ == "__main__":
     run()
 
-# AOC 2024: 2024-12-17: day10/puzzle1/..
-# [{'sum_trailhead_scores': 535, 'elapsed_time_s': 0.002334584016352892}]
+# AOC 2024: 2024-12-17: day10/puzzle2/..
+# [{'sum_trailhead_ratings': 1186, 'elapsed_time_s': 0.002405292121693492}]
