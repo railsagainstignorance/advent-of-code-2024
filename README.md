@@ -1,5 +1,7 @@
 # advent-of-code-2024
 
+site: [advent-of-code/2024](https://adventofcode.com/2024)
+
 ## gotchas
 
 ### range(a,b) is from a inclusive to b exclusive
