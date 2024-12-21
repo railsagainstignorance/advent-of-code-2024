@@ -128,76 +128,66 @@ def solve( instance ):
         return perimeter
 
     def calc_region_sides( region_coords_set ):
-        # Find left-most region coord.
-        # Start from there, go down and anti-clockwise round region.
-        # Given a current coord and direction,
-        # - find the next coord ahead in that direction. 
-        # -- If it's in the region, chech ahead right.
-        # --- If ahead right is in the region, move ahead right, turn right (sides++)
-        # --- else ahead (sides no change)
-        # -- else turn stay at coord, turn left (sides++)
-        # repeat until back at start coord and start direction
+        # establish bounding box of region
+        # scan bounding box from top left to bottom right
+        #  for each region coord, check if it has a nhbr in each cardinal direction, appending coord to list for each direction
+        # for each direction, sort the coords
+        # for each cardinal direction, count distinct contiguous runs of coords
+        # return the sum of the counts
 
-        # Find left-most region coord.
-        leftmost_coord = None
-        for coord in region_coords_set:
-            if leftmost_coord is None or coord[0] < leftmost_coord[0]:
-                leftmost_coord = coord
-        assert leftmost_coord is not None, "No leftmost coord found"
+        def get_region_bounding_box( region_coords_set ):
+            min_r_x = min([ coord[0] for coord in region_coords_set ])
+            max_r_x = max([ coord[0] for coord in region_coords_set ])
+            min_r_y = min([ coord[1] for coord in region_coords_set ])
+            max_r_y = max([ coord[1] for coord in region_coords_set ])
+            return min_r_x, max_r_x, min_r_y, max_r_y
+        
+        min_r_x, max_r_x, min_r_y, max_r_y = get_region_bounding_box(region_coords_set)
 
-        initial_coord = leftmost_coord
-        initial_direction = 1 # down, aka south
+        coords_by_cardinal_direction = { # coords having an outside in the given direction
+            0: [], # e
+            1: [], # s
+            2: [], # w
+            3: [], # n
+        }
 
-        current_coord = initial_coord
-        current_direction = initial_direction
+        for y in range(min_r_y, max_r_y+1):
+            for x in range(min_r_x, max_r_x+1):
+                coord = (x, y)
+                if coord not in region_coords_set:
+                    continue
+
+                for direction in range(4):
+                    dx, dy = coord_delta_by_direction[direction]
+                    new_x = x + dx
+                    new_y = y + dy
+
+                    new_coord = (new_x, new_y)
+                    if new_coord not in region_coords_set: # also encompasses OOBounds
+                        coords_by_cardinal_direction[direction].append(coord)
+        
+        for direction, coords in coords_by_cardinal_direction.items():
+            if direction == 0 or direction == 2:
+                coords.sort(key=lambda c: c[0])
+            else:
+                coords.sort(key=lambda c: c[1])
+
+        # print(coords_by_cardinal_direction)
         sides = 0
 
-        def turn_anticlockwise( direction ):
-            return (direction + 3) % 4
-        
-        def turn_clockwise( direction ):
-            return (direction + 1) % 4
-        
-        def get_valid_coord_in_direction_or_none( coord, direction ):
-            x, y = coord
-            dx, dy = coord_delta_by_direction[direction]
-            new_x = x + dx
-            new_y = y + dy
-            if new_x < min_x or new_x > max_x or new_y < min_y or new_y > max_y:
-                return None
-            return (new_x, new_y)
+        for direction, coords in coords_by_cardinal_direction.items():
+            if len(coords) == 0:
+                continue
 
-        while sides==0 or current_coord != initial_coord or current_direction != initial_direction:
-            next_coord     = None
-            next_direction = None
-
-            coord_ahead = get_valid_coord_in_direction_or_none(current_coord, current_direction)
-            if coord_ahead is None:
-                next_coord     = current_coord
-                next_direction = turn_anticlockwise(current_direction)
-                sides += 1
-            elif coord_ahead in region_coords_set:
-                coord_ahead_right = get_valid_coord_in_direction_or_none(coord_ahead, turn_clockwise(current_direction))
-                if coord_ahead_right in region_coords_set:
-                    next_coord = coord_ahead_right
-                    next_direction = turn_clockwise(current_direction)
+            sides += 1
+            coord = coords[0]
+            for next_coord in coords[1:]:
+                combined_abs_delta = abs(next_coord[0] - coord[0]) + abs(next_coord[1] - coord[1])
+                if combined_abs_delta > 1:
                     sides += 1
-                else:
-                    next_coord = coord_ahead
-                    next_direction = current_direction
-            else:
-                next_coord = current_coord
-                next_direction = turn_anticlockwise(current_direction)
-                sides += 1
-
-            assert next_coord is not None, "next_coord is None"
-            assert next_direction is not None, "next_direction is None"
-
-            current_coord     = next_coord
-            current_direction = next_direction
-
+                coord = next_coord
+            
         return sides
-
 
     def find_regions():
         regions = [] # [ { 'char': char, 'coords': set(), 'area': int }, ... ]
@@ -244,3 +234,5 @@ def run():
 if __name__ == "__main__":
     run()
 
+# AOC 2024: 2024-12-21: day12/puzzle2/..
+# [{'total_side_price_of_fencing': 901100, 'elapsed_time_s': 0.04278491600416601}]
