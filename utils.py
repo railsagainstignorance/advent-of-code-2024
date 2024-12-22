@@ -45,6 +45,12 @@ def get_int_yx_array_from_input( arg ):
     int_2d_array = [ list(map(int, list(row_str))) for row_str in row_strs ]
     return int_2d_array
 
+def construct_char_yx_array( width, height, default_char ):
+    return [ [default_char for _ in range(width)] for _ in range(height) ]
+
+def construct_int_yx_array( width, height, default_int=0 ):
+    return [ [default_int for _ in range(width)] for _ in range(height) ]
+
 def print_here():
     here = __file__ # NB, the path to utils from the code will have a trailing ..
     here_path = os.path.dirname(here)
@@ -148,6 +154,14 @@ class TestUtils(unittest.TestCase):
 
         with self.assertRaises(AssertionError):
             exercise_fn_with_cases( fn, [{ 'input': 'a', 'output': 'a' }], attrs )
+
+    def test_construct_char_yx_array( self ):
+        char_2d_array = construct_char_yx_array( 2, 3, '.' )
+        self.assertEqual( char_2d_array, [['.','.'],['.','.'],['.','.']] )
+
+    def test_construct_int_yx_array( self ):
+        int_2d_array = construct_int_yx_array( 2, 3, 0 )
+        self.assertEqual( int_2d_array, [[0,0],[0,0],[0,0]] )   
 
 if __name__ == "__main__":
     unittest.main()
