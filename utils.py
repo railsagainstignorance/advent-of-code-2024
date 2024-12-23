@@ -67,6 +67,13 @@ coord_delta_by_direction = { # [up+down direction 0-3] = coord (x,y)
     3: ( 0, -1), # n
 }
 
+direction_by_char_arrow = {
+    '>': 0, # e
+    'v': 1, # s
+    '<': 2, # w
+    '^': 3, # n
+}
+
 coord_delta_by_direction_with_diagonals = { # [up+down+diag direction 0-7] = coord (x,y)
     0: ( 1,  0), # e
     1: ( 1,  1), # se
@@ -114,7 +121,8 @@ def exercise_fn_with_cases( fn: callable, cases: list[dict], attrs: list[str], v
         else:
             final_attr = attrs[-1]
             response_item[final_attr] = output[final_attr]
-            response_item['elapsed_time_s'] = end - start
+        
+        response_item['elapsed_time_s'] = end - start
     
         if response_item != {}:
             response.append( response_item )
