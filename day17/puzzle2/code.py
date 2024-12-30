@@ -115,7 +115,7 @@ def solve( instance ):
             #     print( f"step={step}: output_so_far={output_so_far}, pc={self.pc}, registers={self.registers}" )
 
             output = self.get_output_as_csv()
-            return output, step
+            return output, step, self.output_ints
         
         def get_combo_operand(self, operand):
             # Combo operands 0 through 3 represent literal values 0 through 3.
@@ -217,6 +217,70 @@ def solve( instance ):
 
             self.registers[label] = value
 
+    def recurse_through_outputs_and_as( spec, target_output, correct_output_ints_so_far=[], a_ints_so_far=[] ):
+        correct_output_ints_so_far_csv = ','.join(map(str,correct_output_ints_so_far))
+        assert target_output.startswith(correct_output_ints_so_far_csv), f"but target_output={target_output} and correct_output_ints_so_far_csv={correct_output_ints_so_far_csv}"
+
+        computer = Computer(spec)
+        # construct lower_a from a_ints_so_far
+        lower_a = 0
+        num_lower_a_bits = 0
+        for ai in a_ints_so_far:
+            lower_a += ai * 2**num_lower_a_bits
+            num_lower_a_bits += 3
+        print( f"lower_a={lower_a}, correct_output_ints_so_far={correct_output_ints_so_far}, a_ints_so_far={a_ints_so_far}")
+        # if correct_output_ints_so_far_csv == target_output:
+        #     return True, lower_a, correct_output_ints_so_far_csv
+        
+        # iterate over increasing higher_a to find next output char
+        correct_A = None
+        output_after_halting_csv = None
+        for higher_a in range(0, 2**10):
+            a = lower_a + (2**num_lower_a_bits)*higher_a
+            computer.reset()
+            computer.set_register('A', a)
+            output_after_halting_csv, step, output_ints = computer.run_until_halting_or_deviates(target_output)
+
+            # stop if we have found the full sequence
+
+            if output_after_halting_csv == target_output:
+                correct_A = a
+                for da in range(-7,1):
+                    smaller_a = correct_A + da
+                    computer.reset()
+                    computer.set_register('A', smaller_a)
+                    output_after_halting_csv, step, output_ints = computer.run_until_halting_or_deviates(target_output)
+                    if output_after_halting_csv == target_output:
+                        correct_A = smaller_a
+                        break
+                return True, correct_A, output_after_halting_csv
+
+            # keep increasing higher_a if we have not found the next in sequence                
+            if len(output_ints)-1 <= len(correct_output_ints_so_far):
+                continue
+
+            # pluck off the lower 3 bits from higher_a to append to lower_a
+            next_a_int = higher_a % 2**3
+            next_found_output_int = output_ints[len(correct_output_ints_so_far)]
+
+            # check if we find the full sequence by continuing from this higher_a
+            # or should we keep increasing higher_a
+
+            found_all, correct_A, output_after_halting_csv = recurse_through_outputs_and_as( 
+                spec,
+                target_output, 
+                correct_output_ints_so_far + [next_found_output_int], 
+                a_ints_so_far              + [next_a_int]
+                )
+
+            if found_all:
+                return True, correct_A, output_after_halting_csv
+            else:
+                print( f"back-tracking")
+            # else: keep increasing this higher_a
+
+        return False, None, None
+
     output_after_halting_csv = None
     spec = parse_input_into_spec( instance['input'] )
     computer = Computer(spec)
@@ -226,29 +290,12 @@ def solve( instance ):
     else: 
         target_output = computer.program_ints_csv
         print( f"target_output={target_output}" )
-        step_counts_by_output_length = { 1:{} } # [num_output_ints][steps] = count
-        
-        min_a = 0
-        max_a = 100000000
 
-        for a in range(min_a, max_a):
-            computer.reset()
-            computer.set_register('A', a)
-            output_after_halting_csv, step = computer.run_until_halting_or_deviates(target_output)
-            num_output_ints = int((len(output_after_halting_csv) +1 )/2)
-            if num_output_ints not in step_counts_by_output_length:
-                step_counts_by_output_length[num_output_ints] = {}
-            if step not in step_counts_by_output_length[num_output_ints]:
-                step_counts_by_output_length[num_output_ints][step] = 0
-            step_counts_by_output_length[num_output_ints][step] += 1
-            if a % 1000000 == 0:
-                print( f"a={a}" )
-                pprint.pp( step_counts_by_output_length )               
-            # if num_output_ints >= 6:
-            #     print( f"a={a}, step={step}, output_after_halting_csv={output_after_halting_csv}" )
-            if output_after_halting_csv == target_output:
-                correct_A = a
-                break
+        found_all, c_a, o_a_h_csv = recurse_through_outputs_and_as( spec, target_output )
+        correct_A = c_a
+        output_after_halting_csv = o_a_h_csv
+        assert found_all
+
     return {
         'output_after_halting_csv': output_after_halting_csv,
         'correct_A': correct_A,
