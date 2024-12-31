@@ -99,9 +99,12 @@ def solve( instance ):
         
         def run_until_halting_or_deviates( self, target_output, max_steps=10000):
             step = 0
+            state = None
             while step < max_steps:
                 step += 1
-                if self.pc < 0 or self.pc >= len(self.program_ints):
+                assert self.pc >= 0
+                if self.pc >= len(self.program_ints):
+                    state = "HALTED"
                     break
                 single_output = self.run_one_instruction()
                 if single_output is not None:
@@ -109,13 +112,17 @@ def solve( instance ):
                     # if len(output_so_far) > 1:
                     #     print( f"step={step}: output_so_far={output_so_far}" )
                     if not target_output.startswith(output_so_far):
+                        state = "DEVIATED"
                         break
+
+            if step >= max_steps:
+                state = "MAXED"
 
             # if step == 9:
             #     print( f"step={step}: output_so_far={output_so_far}, pc={self.pc}, registers={self.registers}" )
 
             output = self.get_output_as_csv()
-            return output, step, self.output_ints
+            return output, step, self.output_ints, state
         
         def get_combo_operand(self, operand):
             # Combo operands 0 through 3 represent literal values 0 through 3.
@@ -144,7 +151,7 @@ def solve( instance ):
             instruction = self.program_ints[self.pc]
             operand     = self.program_ints[self.pc+1]
 
-            # The adv instruction (opcode 0) performs division. The numerator is the value in the A register. The denominator is found by raising 2 to the power of the instruction's combo operand. (So, an operand of 2 would divide A by 4 (2^2); an operand of 5 would divide A by 2^B.) The result of the division operation is truncated to an integer and then written to the A register.
+            # The adv instruction (opcode 0) performs division. The numerator is the value in the A register. The denominator is found by raising 2 to the power of the instruction's combo operand. (So, an operand of 2 would divide A by 4 (2**2); an operand of 5 would divide A by 2**8.) The result of the division operation is truncated to an integer and then written to the A register.
 
             # The bxl instruction (opcode 1) calculates the bitwise XOR of register B and the instruction's literal operand, then stores the result in register B.
 
@@ -217,84 +224,102 @@ def solve( instance ):
 
             self.registers[label] = value
 
-    def recurse_through_outputs_and_as( spec, target_output, correct_output_ints_so_far=[], a_ints_so_far=[] ):
-        correct_output_ints_so_far_csv = ','.join(map(str,correct_output_ints_so_far))
-        assert target_output.startswith(correct_output_ints_so_far_csv), f"but target_output={target_output} and correct_output_ints_so_far_csv={correct_output_ints_so_far_csv}"
+    known_contexts = set()
+
+    def recurse_through_outputs_and_as(
+            spec                        :dict, 
+            correct_output_ints_so_far  :list[int]=[], 
+            a_ints_so_far               :list[int]=[] 
+            ):
+        """
+        return best_a:int (or None)
+        """
+
+        context = hash( (','.join(map(str, correct_output_ints_so_far)), ','.join(map(str, a_ints_so_far))))
+        if context in known_contexts:
+            return None
+        else:
+            known_contexts.add( context )
 
         computer = Computer(spec)
-        # construct lower_a from a_ints_so_far
+        target_output = computer.program_ints_csv
+        target_output_ints = computer.program_ints
+
+        assert len(target_output_ints)>=len(correct_output_ints_so_far)
+
+        # construct lower_a and num_lower_a_bits from a_ints_so_far
         lower_a = 0
         num_lower_a_bits = 0
         for ai in a_ints_so_far:
             lower_a += ai * 2**num_lower_a_bits
             num_lower_a_bits += 3
-        print( f"lower_a={lower_a}, correct_output_ints_so_far={correct_output_ints_so_far}, a_ints_so_far={a_ints_so_far}")
-        # if correct_output_ints_so_far_csv == target_output:
-        #     return True, lower_a, correct_output_ints_so_far_csv
-        
+
+        # print( f"DEBUG: correct_output_ints_so_far={correct_output_ints_so_far}, a_ints_so_far={a_ints_so_far}, lower_a={lower_a}, num_lower_a_bits={num_lower_a_bits}")
+
         # iterate over increasing higher_a to find next output char
-        correct_A = None
-        output_after_halting_csv = None
+        best_a = None
+
         for higher_a in range(0, 2**10):
             a = lower_a + (2**num_lower_a_bits)*higher_a
             computer.reset()
             computer.set_register('A', a)
-            output_after_halting_csv, step, output_ints = computer.run_until_halting_or_deviates(target_output)
+            output_after_halting_csv, step, output_ints, state = computer.run_until_halting_or_deviates(target_output)
 
-            # stop if we have found the full sequence
+            if state=="HALTED":
+                # if a==117440:
+                #     print(f"DEBUG: a={a}, higher_a={higher_a}, a_ints_so_far={a_ints_so_far}, num_lower_a_bits={num_lower_a_bits}, output_after_halting_csv={output_after_halting_csv}, target_output={target_output}, output_after_halting_csv==target_output ={output_after_halting_csv==target_output}, step={step}, output_ints={output_ints}, state={state}, best_a={best_a}")
+                #     assert False
 
-            if output_after_halting_csv == target_output:
-                correct_A = a
-                for da in range(-7,1):
-                    smaller_a = correct_A + da
-                    computer.reset()
-                    computer.set_register('A', smaller_a)
-                    output_after_halting_csv, step, output_ints = computer.run_until_halting_or_deviates(target_output)
-                    if output_after_halting_csv == target_output:
-                        correct_A = smaller_a
-                        break
-                return True, correct_A, output_after_halting_csv
+                if output_after_halting_csv==target_output: # NB might HALT short of full output
+                    if best_a == None or a < best_a:
+                        best_a = a
 
-            # keep increasing higher_a if we have not found the next in sequence                
-            if len(output_ints)-1 <= len(correct_output_ints_so_far):
-                continue
+            elif state == "DEVIATED":
+                # which means final int of output_ints is wrong
+                output_ints.pop()
 
-            # pluck off the lower 3 bits from higher_a to append to lower_a
-            next_a_int = higher_a % 2**3
-            next_found_output_int = output_ints[len(correct_output_ints_so_far)]
+                if len(output_ints) > len(correct_output_ints_so_far):
+                    next_correct_output_int = output_ints[len(correct_output_ints_so_far)]
+                    next_a_int = higher_a % 2**3
 
-            # check if we find the full sequence by continuing from this higher_a
-            # or should we keep increasing higher_a
-
-            found_all, correct_A, output_after_halting_csv = recurse_through_outputs_and_as( 
-                spec,
-                target_output, 
-                correct_output_ints_so_far + [next_found_output_int], 
-                a_ints_so_far              + [next_a_int]
-                )
-
-            if found_all:
-                return True, correct_A, output_after_halting_csv
+                    recursed_a = recurse_through_outputs_and_as(
+                        spec, 
+                        correct_output_ints_so_far + [next_correct_output_int],
+                        a_ints_so_far + [next_a_int] 
+                        )
+                    
+                    if recursed_a != None:
+                        if best_a == None or recursed_a < best_a:
+                            best_a = recursed_a
+            elif state == "MAXED":
+                pass
             else:
-                print( f"back-tracking")
-            # else: keep increasing this higher_a
+                assert False, f"unknown state={state}"
 
-        return False, None, None
+        # print(f"DEBUG: best_a={best_a}")
+
+        return best_a
 
     output_after_halting_csv = None
     spec = parse_input_into_spec( instance['input'] )
-    computer = Computer(spec)
     correct_A = None
+    computer = Computer(spec)
+
     if not 'decorrupt_register_A' in instance:
         output_after_halting_csv = computer.run_until_halting()
     else: 
         target_output = computer.program_ints_csv
         print( f"target_output={target_output}" )
 
-        found_all, c_a, o_a_h_csv = recurse_through_outputs_and_as( spec, target_output )
-        correct_A = c_a
-        output_after_halting_csv = o_a_h_csv
-        assert found_all
+        best_a = recurse_through_outputs_and_as( spec )
+        assert best_a != None, "found no valid a"
+
+        # check best_a works
+        computer.set_register('A', best_a)
+        output_after_halting_csv, step, output_ints, state = computer.run_until_halting_or_deviates(target_output)
+        assert state == "HALTED"
+
+        correct_A = best_a
 
     return {
         'output_after_halting_csv': output_after_halting_csv,
@@ -313,3 +338,10 @@ def run():
 if __name__ == "__main__":
     run()
 
+# AOC 2024: 2024-12-31: day17/puzzle2/..
+# target_output=0,3,5,4,3,0
+# target_output=2,4,1,1,7,5,1,5,4,3,5,5,0,3,3,0
+# [{'elapsed_time_s': 0.2881907499395311},
+#  {'correct_A': 164278899142333,
+#   'output_after_halting_csv': '2,4,1,1,7,5,1,5,4,3,5,5,0,3,3,0',
+#   'elapsed_time_s': 6.307547958800569}]
