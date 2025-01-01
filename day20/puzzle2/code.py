@@ -93,7 +93,11 @@ def solve( instance ):
                         path_sequence.append( new_coord )
                         break
 
-        return path_sequence
+        path_index_by_coord = {} # [coord]=index
+        for i, coord in enumerate(path_sequence):
+            path_index_by_coord[coord] = i
+
+        return path_sequence, path_index_by_coord
     
     def find_all_cheats( char_yx_grid, max_x, max_y ):
         cheats = []
@@ -112,13 +116,13 @@ def solve( instance ):
         
         return cheats
     
-    def assess_cheats( path_sequence, cheats, min_time_saved_by_cheats ):
+    def assess_cheats( path_index_by_coord, cheats, min_time_saved_by_cheats ):
         num_cheats_by_picoseconds_saved = {}
 
         for cheat in cheats:
             coord1, coord2 = cheat
-            p1 = path_sequence.index( coord1 )
-            p2 = path_sequence.index( coord2 )
+            p1 = path_index_by_coord[coord1]
+            p2 = path_index_by_coord[coord2]
             delta_p = abs(p1-p2) -2
             if not delta_p in num_cheats_by_picoseconds_saved:
                 num_cheats_by_picoseconds_saved[delta_p] = 0
@@ -143,12 +147,12 @@ def solve( instance ):
     char_yx_grid, max_x, max_y, s_coord, e_coord = parse_input( instance['input'] )
     # print( f"DEBUG: max_x={max_x}, max_y={max_y}, s_coord={s_coord}, e_coord={e_coord}")
 
-    path_sequence = construct_path_sequence( char_yx_grid, max_x, max_y, s_coord, e_coord )
+    path_sequence, path_index_by_coord = construct_path_sequence( char_yx_grid, max_x, max_y, s_coord, e_coord )
     cheats = find_all_cheats( char_yx_grid, max_x, max_y )
 
     # print( f"DEBUG: path_sequence={path_sequence}\ncheats={cheats}")
 
-    num_cheats_by_picoseconds_saved, total_num_cheats_saving_more_than_min_time = assess_cheats( path_sequence, cheats, min_time_saved_by_cheats )
+    num_cheats_by_picoseconds_saved, total_num_cheats_saving_more_than_min_time = assess_cheats( path_index_by_coord, cheats, min_time_saved_by_cheats )
 
     return {
         'num_cheats_by_picoseconds_saved': num_cheats_by_picoseconds_saved,
