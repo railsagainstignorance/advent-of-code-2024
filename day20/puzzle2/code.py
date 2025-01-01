@@ -40,18 +40,21 @@ instances = [
         64: 1,
         },
     'min_time_saved_by_cheats': 40,
-    'total_num_cheats_saving_more_than_min_time': 2
+    'total_num_cheats_saving_more_than_min_time': 2,
+    'min_time_saved_by_longer_cheats': 50,
+    'total_num_longer_cheats_saving_more_than_min_time': 285, # 32+31+29+39+25+23+20+19+12+14+12+22+4+3,
     },    
     {
         'input': "../puzzle1/input.txt",
-        'min_time_saved_by_cheats': 100
-
+        'min_time_saved_by_cheats': 100,
+        'min_time_saved_by_longer_cheats': 100,
     },
 ]
 
 attrs = [
     'num_cheats_by_picoseconds_saved',
     'total_num_cheats_saving_more_than_min_time',
+    'total_num_longer_cheats_saving_more_than_min_time',
     ]
 
 def solve( instance ):
@@ -61,6 +64,8 @@ def solve( instance ):
     wall_char = '#'
     track_char = '.'
     min_time_saved_by_cheats = instance['min_time_saved_by_cheats']
+    min_time_saved_by_longer_cheats = instance['min_time_saved_by_longer_cheats']
+    max_long_cheat_length = 20
 
     def parse_input( input ):
         char_yx_grid = get_char_yx_array_from_input( input )
@@ -139,6 +144,37 @@ def solve( instance ):
 
         return sorted_num_cheats_by_picoseconds_saved, total_num_cheats_saving_more_than_min_time
 
+    def process_longer_cheats( path_sequence, path_index_by_coord, cheats, min_time_saved_by_longer_cheats ):
+        num_longer_cheats_by_picoseconds_saved = {}
+
+        # iterate over path_sequence
+        # look at each subsequent coord, 
+        ## calc manhattan distance, check <= max_long_cheat_length
+        ## calc time saved, record if >= min_time_saved_by_longer_cheats
+
+        for from_i, from_coord in enumerate( path_sequence ):
+            from_x, from_y = from_coord
+            for to_i in range( from_i+1, len(path_sequence) ):
+                to_coord = path_sequence[to_i]
+                m_dist = abs( to_coord[0]-from_coord[0] ) + abs( to_coord[1] - from_coord[1])
+                if m_dist > max_long_cheat_length:
+                    continue
+                i_dist = to_i - from_i
+                if m_dist >= i_dist:
+                    continue
+                time_saved = i_dist - m_dist
+                if time_saved >= min_time_saved_by_longer_cheats:
+
+                    if not time_saved in num_longer_cheats_by_picoseconds_saved:
+                        num_longer_cheats_by_picoseconds_saved[time_saved] = 0
+                    num_longer_cheats_by_picoseconds_saved[time_saved] += 1
+
+        sorted_num_longer_cheats_by_picoseconds_saved = sort_dict(num_longer_cheats_by_picoseconds_saved)
+        
+        total_num_longer_cheats_saving_more_than_min_time = sum( list( sorted_num_longer_cheats_by_picoseconds_saved.values() ))
+
+        return sorted_num_longer_cheats_by_picoseconds_saved, total_num_longer_cheats_saving_more_than_min_time
+
     # construct sequence of coords for initial path from s to e
     # construct list of all possible cheats: all ".#." horiz and vert
     ## convert each cheat into a start/end coord pair (from "." to ".")
@@ -154,9 +190,14 @@ def solve( instance ):
 
     num_cheats_by_picoseconds_saved, total_num_cheats_saving_more_than_min_time = assess_cheats( path_index_by_coord, cheats, min_time_saved_by_cheats )
 
+    sorted_num_longer_cheats_by_picoseconds_saved, total_num_longer_cheats_saving_more_than_min_time = process_longer_cheats( path_sequence, path_index_by_coord, cheats, min_time_saved_by_longer_cheats )
+
+    # pprint.pp(sorted_num_longer_cheats_by_picoseconds_saved)
+
     return {
         'num_cheats_by_picoseconds_saved': num_cheats_by_picoseconds_saved,
         'total_num_cheats_saving_more_than_min_time': total_num_cheats_saving_more_than_min_time,
+        'total_num_longer_cheats_saving_more_than_min_time': total_num_longer_cheats_saving_more_than_min_time
     }
 
 def run():
@@ -171,8 +212,8 @@ def run():
 if __name__ == "__main__":
     run()
 
-# AOC 2024: 2025-01-01: day20/puzzle1/..
-# [{'elapsed_time_s': 0.00020808400586247444},
+# AOC 2024: 2025-01-01: day20/puzzle2/..
+# [{'elapsed_time_s': 0.0005096658132970333},
 #  {'num_cheats_by_picoseconds_saved': {2: 1003,
 #                                       4: 1003,
 #                                       6: 300,
@@ -660,4 +701,5 @@ if __name__ == "__main__":
 #                                       9278: 1,
 #                                       9280: 1},
 #   'total_num_cheats_saving_more_than_min_time': 1327,
-#   'elapsed_time_s': 1.631898958934471}]
+#   'total_num_longer_cheats_saving_more_than_min_time': 985737,
+#   'elapsed_time_s': 4.190009499900043}]
