@@ -121,12 +121,21 @@ def exercise_fn_with_cases( fn: callable, cases: list[dict], attrs: list[str], v
         else:
             final_attr = attrs[-1]
             response_item[final_attr] = output[final_attr]
-        
+
         response_item['elapsed_time_s'] = end - start
     
         if response_item != {}:
             response.append( response_item )
     return response
+
+def sort_dict( unsorted_dict:dict={} ):
+    sorted_keys = list(unsorted_dict.keys())
+    sorted_keys.sort()
+    
+    sorted_dict = {}
+    for key in sorted_keys:
+        sorted_dict[key] = unsorted_dict[key]
+    return sorted_dict
 
 import unittest # https://docs.python.org/3/library/unittest.html
 class TestUtils(unittest.TestCase):
@@ -155,8 +164,15 @@ class TestUtils(unittest.TestCase):
             return { 'output': chr(ord(case['input'])+1) }
         attrs = ['output']
 
-        self.assertEqual( exercise_fn_with_cases( fn, [{ 'input': 'a', 'output': 'b' }], attrs ), []                )
-        self.assertEqual( exercise_fn_with_cases( fn, [{ 'input': 'a' }],                attrs ), [{'output': 'b'}] )
+        samples = [
+            { 'context': [{ 'input': 'a', 'output': 'b' }], 'output': [{}]              },
+            { 'context': [{ 'input': 'a' }]               , 'output': [{'output': 'b'}] },
+        ]
+
+        for sample in samples:
+            output = exercise_fn_with_cases( fn, sample['context'], attrs )
+            del output[0]['elapsed_time_s']
+            self.assertEqual( output, sample['output'] )
 
         # assert exception
 
@@ -170,6 +186,16 @@ class TestUtils(unittest.TestCase):
     def test_construct_int_yx_array( self ):
         int_2d_array = construct_int_yx_array( 2, 3, 0 )
         self.assertEqual( int_2d_array, [[0,0],[0,0],[0,0]] )   
+
+    def test_sort_dict( self ):
+        d = {
+            3: 'a',
+            1: 'b',
+            2: 'c'
+        }
+
+        sorted_d = sort_dict( d )
+        self.assertEqual( sorted_d, {1:'b', 2:'c', 3:'a'})
 
 if __name__ == "__main__":
     unittest.main()
