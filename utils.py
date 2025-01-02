@@ -1,6 +1,7 @@
 import os
 from datetime import datetime
 from timeit import default_timer as timer
+from itertools import permutations
 
 ymd = datetime.now().strftime("%Y-%m-%d")
 
@@ -67,6 +68,12 @@ coord_delta_by_direction = { # [up+down direction 0-3] = coord (x,y)
     3: ( 0, -1), # n
 }
 
+char_by_coord_delta = { # [ coord (x,y) ] = '<'
+    ( 1,  0): '>', # e
+    ( 0,  1): 'v', # s
+    (-1,  0): '<', # w
+    ( 0, -1): '^', # n
+}
 direction_by_char_arrow = {
     '>': 0, # e
     'v': 1, # s
@@ -137,6 +144,15 @@ def sort_dict( unsorted_dict:dict={} ):
         sorted_dict[key] = unsorted_dict[key]
     return sorted_dict
 
+def my_sign(x):
+    return (x > 0) - (x < 0)
+
+def my_permutations( items ):
+    return list(permutations(items))
+
+def my_distinct_permutations( items ):
+    return list(set(list(permutations(items))))
+
 import unittest # https://docs.python.org/3/library/unittest.html
 class TestUtils(unittest.TestCase):
 
@@ -196,6 +212,18 @@ class TestUtils(unittest.TestCase):
 
         sorted_d = sort_dict( d )
         self.assertEqual( sorted_d, {1:'b', 2:'c', 3:'a'})
+
+    def test_my_sign( self ):
+        self.assertEqual( my_sign(-3), -1 )
+        self.assertEqual( my_sign( 0),  0 )
+        self.assertEqual( my_sign(34),  1 )
+
+    def test_my_permutations( self ):
+        self.assertEqual( len(my_permutations([1,2,3])), 6)
+
+    def test_my_distinct_permutations( self ):
+        self.assertEqual( my_distinct_permutations( [1,1] ), [(1,1)] )
+        self.assertEqual( len(my_distinct_permutations( [1,1,2] )), 3 )
 
 if __name__ == "__main__":
     unittest.main()

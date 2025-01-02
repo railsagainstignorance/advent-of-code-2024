@@ -1,0 +1,177 @@
+import sys
+sys.path.append('../')
+sys.path.append('../../')
+
+import re
+import math
+import pprint
+
+from utils import *
+
+instances = [
+    {
+        'input': '''\
+029A
+980A
+179A
+456A
+379A''',
+    'shortest_sequences_of_button_presses': [
+        '029A: <vA<AA>>^AvAA<^A>A<v<A>>^AvA^A<vA>^A<v<A>^A>AAvA^A<v<A>A>^AAAvA<^A>A',
+        '980A: <v<A>>^AAAvA^A<vA<AA>>^AvAA<^A>A<v<A>A>^AAAvA<^A>A<vA>^A<A>A',
+        '179A: <v<A>>^A<vA<A>>^AAvAA<^A>A<v<A>>^AAvA^A<vA>^AA<A>A<v<A>A>^AAAvA<^A>A',
+        '456A: <v<A>>^AA<vA<A>>^AAvAA<^A>A<vA>^A<A>A<vA>^A<A>A<v<A>A>^AAvA<^A>A',
+        '379A: <v<A>>^AvA^A<vA<AA>>^AAvA<^A>AAvA^A<vA>^AA<A>A<v<A>A>^AAAvA<^A>A'
+        ],
+    'sum_of_complexities': 126384,
+    },    
+    {
+        'input': "../puzzle1/input.txt",
+    },
+]
+
+attrs = [
+    'shortest_sequences_of_button_presses',
+    'sum_of_complexities'
+    ]
+
+def solve( instance ):
+    KEYPAD_VOID_CHAR = '.'
+
+    class Keypad:
+        def __init__(self, spec):
+            self.output_keypad_str = spec['output_keypad_str']
+            self.__parse_output_keypad_str()
+            self.initial_finger_char = 'A'
+            self.initial_finger_coord = self.output_keypad_by_char[self.initial_finger_char]
+            self.__reset()
+            self.__check_current_pointing()
+        
+        def __parse_output_keypad_str( self ):
+            char_yx_array = get_char_yx_array_from_input( self.output_keypad_str )
+            self.output_keypad_by_coord = {} # [coord] = char
+            self.output_keypad_by_char  = {} # [char] = coord
+            for y in range( 0, len(char_yx_array) ):
+                for x in range(0, len(char_yx_array[0])):
+                    char = char_yx_array[y][x]
+                    if char == KEYPAD_VOID_CHAR:
+                        continue
+                    coord = (x,y)
+                    self.output_keypad_by_coord[coord] = char
+                    self.output_keypad_by_char[char] = coord
+
+        def __reset( self ):
+            self.finger_coord = self.initial_finger_coord
+
+        def __check_current_pointing( self ):
+            if not self.finger_coord in self.output_keypad_by_coord:
+                raise Exception( f"invalid finger_coord={self.finger_coord}" )
+
+        def set_finger_coord( self, coord ):
+            self.finger_coord = coord
+            self.__check_current_pointing()
+
+        def set_finger_char( self, char ):
+            coord = self.output_keypad_by_char[char]
+            self.set_finger_coord( coord )
+
+        def get_finger_details( self ):
+            coord = self.finger_coord
+            char = self.output_keypad_by_coord[ coord ]
+            return coord, char
+
+        def calc_key_press_groups_to_generate_target_outputs( self, target_output_chars: list[str]=[] ):
+            key_press_groups = []
+
+            initial_finger_coord = self.initial_finger_coord
+            initial_finger_char = self.output_keypad_by_coord[initial_finger_coord]
+
+            # print(f"DEBUG: initial_finger_coord={initial_finger_coord}, initial_finger_char={initial_finger_char}")
+
+            for char in target_output_chars:
+                from_finger_details = self.get_finger_details()
+                finger_coord, finger_char = from_finger_details
+                # print(f"DEBUG: char={char}, finger_coord={finger_coord}, finger_char={finger_char}")
+                key_press_group = []
+                key_press_groups.append( key_press_group )
+                # calc manhattan set of steps from current finger pos to activating output char
+                # find all perms
+                # filter out any perms which stray over invalid coords
+
+                char_coord = self.output_keypad_by_char[char]
+                dist_x = char_coord[0] - finger_coord[0]
+                dist_y = char_coord[1] - finger_coord[1]
+                delta_coords = [(my_sign(dist_x), 0)] * abs(dist_x) + [(0, my_sign(dist_y))] * abs(dist_y)
+                delta_coord_perms = my_distinct_permutations( delta_coords )
+                # print(f"DEBUG: char={char}, \ndelta_coords={delta_coords},\ndelta_coord_perms={delta_coord_perms}")
+
+                for dcp in delta_coord_perms:
+                    x, y = self.finger_coord
+                    # print(f"dcp={dcp}, finger_coord={self.finger_coord}")
+                    found_invalid_coord = False
+                    for delta_coord in dcp:
+                        # print(f"delta_coord={delta_coord}")
+                        dx, dy = delta_coord
+                        x = x + dx
+                        y = y + dy
+                        next_coord = (x,y)
+                        if not next_coord in self.output_keypad_by_coord:
+                            found_invalid_coord = True
+                            break
+                    if not found_invalid_coord:
+                        # print( f"DEBUG: valid dcp={dcp}")
+                        delta_chars = [ char_by_coord_delta[dc] for dc in dcp ]
+                        delta_chars.append( 'A' )
+                        key_press_group.append( delta_chars )
+
+                self.set_finger_char( char )
+                to_finger_details = self.get_finger_details()
+                # print(f"char={char}, from_finger_details={from_finger_details}, to_finger_details={to_finger_details}, key_press_group={key_press_group}\n")
+
+            return key_press_groups
+
+    def keypad_experiment( keypad_codes ):
+        spec = {
+            'output_keypad_str': '''\
+789
+456
+123
+.0A'''
+            }
+        keypad_experiment = Keypad( spec )
+
+        key_press_groups_by_code = {}
+
+        for keypad_code in keypad_codes:
+            key_press_groups = keypad_experiment.calc_key_press_groups_to_generate_target_outputs(keypad_code)
+            keypad_code_str = ''.join(keypad_code)
+            key_press_groups_by_code[keypad_code_str] = key_press_groups
+
+        pprint.pp( key_press_groups_by_code )
+
+    door_keypad_codes = get_char_yx_array_from_input( instance['input'] )
+
+    keypad_experiment( door_keypad_codes )
+
+    
+
+    shortest_sequences_of_button_presses = []
+    sum_of_complexities = 0
+
+    return {
+        'shortest_sequences_of_button_presses': shortest_sequences_of_button_presses,
+        'sum_of_complexities': sum_of_complexities
+    }
+
+def run():
+    print_here()
+    verbose = True
+    response = exercise_fn_with_cases( solve, instances, attrs, verbose )
+    if verbose:
+        pprint.pp( response )
+    else:
+        print( response )
+
+if __name__ == "__main__":
+    run()
+
