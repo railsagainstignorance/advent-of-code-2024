@@ -16,13 +16,6 @@ instances = [
 179A
 456A
 379A''',
-    'shortest_sequences_of_button_presses': [
-        '029A: <vA<AA>>^AvAA<^A>A<v<A>>^AvA^A<vA>^A<v<A>^A>AAvA^A<v<A>A>^AAAvA<^A>A',
-        '980A: <v<A>>^AAAvA^A<vA<AA>>^AvAA<^A>A<v<A>A>^AAAvA<^A>A<vA>^A<A>A',
-        '179A: <v<A>>^A<vA<A>>^AAvAA<^A>A<v<A>>^AAvA^A<vA>^AA<A>A<v<A>A>^AAAvA<^A>A',
-        '456A: <v<A>>^AA<vA<A>>^AAvAA<^A>A<vA>^A<A>A<vA>^A<A>A<v<A>A>^AAvA<^A>A',
-        '379A: <v<A>>^AvA^A<vA<AA>>^AAvA<^A>AAvA^A<vA>^AA<A>A<v<A>A>^AAAvA<^A>A'
-        ],
     'sum_of_complexities': 126384,
     },    
     {
@@ -31,7 +24,6 @@ instances = [
 ]
 
 attrs = [
-    'shortest_sequences_of_button_presses',
     'sum_of_complexities'
     ]
 
@@ -134,8 +126,11 @@ def solve( instance ):
                 self,
                 remaining_key_press_groups, 
                 sequence_so_far=[],
-                full_sequences=[]
+                full_sequences=None
                 ):
+
+            if full_sequences==None:
+                full_sequences = []
 
             next_key_press_group = remaining_key_press_groups[0]
             if len(remaining_key_press_groups)==0:
@@ -153,23 +148,31 @@ def solve( instance ):
                     )
             return full_sequences
 
-        def generate_all_key_press_groups_for_output_codes( self, output_codes ):
-            all_generated_key_press_groups_for_output_codes = [] # [ {'output_code': ..., 'key_press_groups': [...] }, ...]
+        def generate_key_press_details_for_output_code( self, output_code ):
+
+            key_press_groups = self.calc_key_press_groups_to_generate_target_code(output_code)
+            full_sequences = self.__recursively_expand_key_press_groups_into_full_sequences( key_press_groups )
+
+            key_press_details = {
+                'output_code': output_code,
+                'key_press_groups': key_press_groups,
+                'full_sequences': full_sequences
+                }
+
+            return key_press_details
+
+        def generate_all_key_press_details_for_output_codes( self, output_codes ):
+            all_generated_key_press_details_for_output_codes = [] # [ {'output_code': ..., 'key_press_groups': [...] }, ...]
 
             for output_code in output_codes:
-                key_press_groups = self.calc_key_press_groups_to_generate_target_code(output_code)
-                full_sequences = self.__recursively_expand_key_press_groups_into_full_sequences( key_press_groups )
-                all_generated_key_press_groups_for_output_codes.append( {
-                    'output_code': output_code,
-                    'key_press_groups': key_press_groups,
-                    'full_sequences': full_sequences
-                })
+                key_press_details = self.generate_key_press_details_for_output_code( output_code )
+                all_generated_key_press_details_for_output_codes.append( key_press_details )
 
-            return all_generated_key_press_groups_for_output_codes
+            return all_generated_key_press_details_for_output_codes
 
         # eof class
 
-    def reverse_keypad_to_generate_input_for_output_codes ( keypad_codes ):
+    def reverse_keypad_to_generate_input_for_output_codes( keypad_codes ):
         keycode_str = ''.join(keypad_codes[0])
         if re.search('[0-9]', keycode_str):
            output_keypad_str = '''\
@@ -183,52 +186,77 @@ def solve( instance ):
 <v>'''
         spec = { 'output_keypad_str': output_keypad_str }
         keypad_experiment = Keypad( spec )
-        all_generated_key_press_groups_for_output_codes = keypad_experiment.generate_all_key_press_groups_for_output_codes( keypad_codes )
-        return all_generated_key_press_groups_for_output_codes
+        all_generated_key_press_details_for_output_codes = keypad_experiment.generate_all_key_press_details_for_output_codes( keypad_codes )
+        return all_generated_key_press_details_for_output_codes
   
+    def reverse_keypad_to_generate_input_for_output_code( keypad_code ):
+        all_generated_key_press_details_for_output_codes = reverse_keypad_to_generate_input_for_output_codes( [keypad_code] )
+        assert len(all_generated_key_press_details_for_output_codes)==1
+        return all_generated_key_press_details_for_output_codes[0]
+
     def keypad_experiment( keypad_codes ):
         all_key_press_groups = reverse_keypad_to_generate_input_for_output_codes( keypad_codes )
         pprint.pp( all_key_press_groups )
 
+    def generate_all_full_sequence_strs( all_sequences_for_output_codes, from_full_name, to_full_name ):
+        for sequences_for_output_code in all_sequences_for_output_codes:
+            output_code = sequences_for_output_code['output_code']
+            to_full_sequences = []
+            for sequence_str in sequences_for_output_code[from_full_name]:
+                sequence = list(sequence_str)
+                # print(f"output_code={output_code}, sequence_str={sequence_str}")
+                key_press_details = reverse_keypad_to_generate_input_for_output_code( sequence )
+                to_full_sequences.extend( key_press_details['full_sequences'] )
+
+            to_full_sequence_strs = [ ''.join(s) for s in to_full_sequences ]
+            to_full_sequence_strs.sort( key=len )
+            sequences_for_output_code[to_full_name] = to_full_sequence_strs
 
     def daisy_chain_keypads( door_keypad_codes ):
-        full_sequences_for_output_codes = []
-
-        all_key_press_groups = reverse_keypad_to_generate_input_for_output_codes( door_keypad_codes )
-        for group in all_key_press_groups:
-            output_code = group['output_code']
+        all_sequences_for_output_codes = []
+        for output_code in door_keypad_codes:
             output_code_str = ''.join(output_code)
-            full_sequences = group['full_sequences']
-            full_sequence_strs = [ ''.join(s) for s in full_sequences ]
-            full_sequences_for_output_codes.append( {
+            sequences_for_output_code = {
                 'output_code_str': output_code_str,
                 'output_code': output_code,
-                'full_sequences': full_sequences,
-                'full_sequence_strs1': full_sequence_strs,
-            })
+                'full_sequence_strs': [output_code_str],
+            }
+            all_sequences_for_output_codes.append( sequences_for_output_code )
 
-        # for output_code_ensemble in full_sequences_for_output_codes:
-        #     full_sequence_strs1 = []
+        # initial <>^v control pad for 0-9 keypad
+        generate_all_full_sequence_strs( all_sequences_for_output_codes, 'full_sequence_strs', 'full_sequence_strs1')
 
-        return full_sequences_for_output_codes
+        #  <>^v control pad to <>^v control pad
+        generate_all_full_sequence_strs( all_sequences_for_output_codes, 'full_sequence_strs1', 'full_sequence_strs2')
 
+        #  <>^v control pad to <>^v control pad
+        generate_all_full_sequence_strs( all_sequences_for_output_codes, 'full_sequence_strs2', 'full_sequence_strs3')
+
+        # calc complexities
+        sum_of_complexities = 0
+        complexities_by_output_code_str = {}
+
+        for sequences_for_output_code in all_sequences_for_output_codes:
+            output_code_str = sequences_for_output_code['output_code_str']
+            shortest_final_sequence = sequences_for_output_code['full_sequence_strs3'][0]
+            output_code_int = int(output_code_str.split('A')[0])
+            complexity = len(shortest_final_sequence)*output_code_int
+            sequences_for_output_code['complexity'] = complexity
+            sum_of_complexities += complexity
+            complexities_by_output_code_str[output_code_str] = complexity
+
+        return all_sequences_for_output_codes, sum_of_complexities, complexities_by_output_code_str
 
     door_keypad_codes = get_char_yx_array_from_input( instance['input'] )
 
-    full_sequences_for_output_codes = daisy_chain_keypads( door_keypad_codes )
+    full_sequences_for_output_codes, sum_of_complexities, complexities_by_output_code_str = daisy_chain_keypads( door_keypad_codes )
 
-    pprint.pp( full_sequences_for_output_codes )
+    pprint.pp( complexities_by_output_code_str )
 
     # keypad_experiment( door_keypad_codes )
     # keypad_experiment( [['^', '<', '^', '<', 'A']] )
 
-
-
-    shortest_sequences_of_button_presses = []
-    sum_of_complexities = 0
-
     return {
-        'shortest_sequences_of_button_presses': shortest_sequences_of_button_presses,
         'sum_of_complexities': sum_of_complexities
     }
 
@@ -244,3 +272,8 @@ def run():
 if __name__ == "__main__":
     run()
 
+# AOC 2024: 2025-01-02: day21/puzzle1/..
+# {'029A': 1972, '980A': 58800, '179A': 12172, '456A': 29184, '379A': 24256}
+# {'319A': 22330, '670A': 45560, '349A': 25128, '964A': 69408, '586A': 39848}
+# [{'elapsed_time_s': 6.914480000035837},
+#  {'sum_of_complexities': 202274, 'elapsed_time_s': 99.75852120807394}]
