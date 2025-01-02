@@ -80,7 +80,7 @@ def solve( instance ):
             char = self.output_keypad_by_coord[ coord ]
             return coord, char
 
-        def calc_key_press_groups_to_generate_target_outputs( self, target_output_chars: list[str]=[] ):
+        def calc_key_press_groups_to_generate_target_code( self, target_output_chars: list[str]=[] ):
             key_press_groups = []
 
             initial_finger_coord = self.initial_finger_coord
@@ -130,30 +130,44 @@ def solve( instance ):
 
             return key_press_groups
 
-    def keypad_experiment( keypad_codes ):
-        spec = {
-            'output_keypad_str': '''\
-789
-456
-123
-.0A'''
-            }
+        def generate_all_key_press_groups_for_output_codes( self, output_codes ):
+            all_generated_key_press_groups_for_output_codes = [] # [ {'output_code': ..., 'key_press_groups': [...] }, ...]
+
+            for output_code in output_codes:
+                key_press_groups = self.calc_key_press_groups_to_generate_target_code(output_code)
+                all_generated_key_press_groups_for_output_codes.append( {
+                    'output_code': output_code,
+                    'key_press_groups': key_press_groups
+                })
+
+            return all_generated_key_press_groups_for_output_codes
+
+        # eof class
+
+    def keypad_experiment( output_keypad_str, keypad_codes):
+        spec = { 'output_keypad_str': output_keypad_str }
         keypad_experiment = Keypad( spec )
+        all_generated_key_press_groups_for_output_codes = keypad_experiment.generate_all_key_press_groups_for_output_codes( keypad_codes )
+        pprint.pp( all_generated_key_press_groups_for_output_codes )
 
-        key_press_groups_by_code = {}
-
-        for keypad_code in keypad_codes:
-            key_press_groups = keypad_experiment.calc_key_press_groups_to_generate_target_outputs(keypad_code)
-            keypad_code_str = ''.join(keypad_code)
-            key_press_groups_by_code[keypad_code_str] = key_press_groups
-
-        pprint.pp( key_press_groups_by_code )
 
     door_keypad_codes = get_char_yx_array_from_input( instance['input'] )
 
-    keypad_experiment( door_keypad_codes )
 
-    
+
+    keypad_experiment( '''\
+789
+456
+123
+.0A''', 
+    door_keypad_codes 
+    )
+
+    keypad_experiment( '''\
+.^A
+<v>''', 
+    [['^', '<', '^', '<', 'A']]
+    )
 
     shortest_sequences_of_button_presses = []
     sum_of_complexities = 0
