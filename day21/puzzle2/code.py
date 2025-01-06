@@ -43,7 +43,7 @@ def solve( instance ):
             self.__parse_output_keypad_str()
             self.initial_finger_char = 'A'
             self.initial_finger_coord = self.output_keypad_by_char[self.initial_finger_char]
-            self.__reset()
+            self.reset()
             self.__check_current_pointing()
         
         def __parse_output_keypad_str( self ):
@@ -59,7 +59,7 @@ def solve( instance ):
                     self.output_keypad_by_coord[coord] = char
                     self.output_keypad_by_char[char] = coord
 
-        def __reset( self ):
+        def reset( self ):
             self.finger_coord = self.initial_finger_coord
 
         def __check_current_pointing( self ):
@@ -73,6 +73,9 @@ def solve( instance ):
         def set_finger_char( self, char ):
             coord = self.output_keypad_by_char[char]
             self.set_finger_coord( coord )
+
+        def get_char_coord( self, char ):
+            return self.output_keypad_by_char[char]
 
         def get_finger_details( self ):
             coord = self.finger_coord
@@ -266,15 +269,139 @@ def solve( instance ):
 
         return all_sequences_for_output_codes, sum_of_complexities, complexities_by_output_code_str
 
+    memoised_situations = {} # [(level, context, remaining_code_str)] = sequence_length
+
+    memoised_keypads = {} # [level] = keypad
+
+    def keypad_for_level( level: int ): 
+        # level==0 => initial directional-numeric keypad, >0 directional-directional
+        assert isinstance(level, int)
+        assert level>=0 and level<=25
+
+        if not level in memoised_keypads:
+            if level <= 1:
+                if level==0:
+                    output_keypad_str = '''\
+789
+456
+123
+.0A'''
+                elif level==1:
+                    output_keypad_str = '''\
+.^A
+<v>'''
+                
+                spec = { 'output_keypad_str': output_keypad_str }
+                keypad = Keypad( spec )
+            else:
+                keypad = memoised_keypads[1] # keypads >0 are all clones of keypad 1
+
+            memoised_keypads[level] = keypad
+
+        return memoised_keypads[level]
+
+    def recursively_find_shortest_sequence_length_for_code( 
+            code:list[str]=None, 
+            max_level: int=None, 
+            level:int=0, 
+            context:tuple=None 
+            ):
+        """
+        input params:
+        * code = list of chars in the code, e.g. ['9', A']
+        * max_level = highest level of keypad
+        * level = which keypad is being considered, 0 => initial keypad, 1 => next keypad, ... max_level
+        * context = where is the finger currently pointing at this level, e.g. (2,2)
+        """
+
+        # print(f"DEBUG: code={code}, max_level={max_level}, level={level}, context={context}")
+
+        assert code      != None
+        assert max_level != None
+        assert max_level >= 2
+        assert len(code) != 0
+
+        code_str = ''.join(code)
+        situation = (level, context, code_str)
+        if not situation in memoised_situations:
+            # stuff happens
+            # - get level's keypad
+            # - point its finger
+            # - generate the sequences for the next code letter
+            # - recurse to each variant, obtaining its shortest sequence length
+            # - return the shortest sequence length
+
+            keypad = keypad_for_level(level)
+
+            if context == None:
+                keypad.reset()
+            else:
+                keypad.set_finger_coord( context )
+        
+            key_press_groups = keypad.calc_key_press_groups_to_generate_target_code( code )
+            # print( f"DEBUG: key_press_groups={key_press_groups}")
+
+            assert len(key_press_groups)==len(code)
+
+            # key_press_groups: a list of lists of chars
+            # DEBUG: key_press_groups=[[['<', 'A']], [['^', 'A']], [['>', '^', '^', 'A'], ['^', '>', '^', 'A'], ['^', '^', '>', 'A']], [['v', 'v', 'v', 'A']]]
+
+            shortest_length_from_each_key_press_group = []
+
+            for key_press_group in key_press_groups:
+                shortest_length = None
+                for chars in key_press_group:
+                    next_length = None
+                    if level == max_level:
+                        next_length = len(chars)
+                    else:
+                        next_length = recursively_find_shortest_sequence_length_for_code( 
+                            chars, 
+                            max_level, 
+                            level+1, 
+                            None 
+                            )
+
+                    if shortest_length == None or next_length < shortest_length:
+                        shortest_length = next_length
+                shortest_length_from_each_key_press_group.append( shortest_length )
+
+            shortest_combined_length = sum( shortest_length_from_each_key_press_group )
+            memoised_situations[situation] = shortest_combined_length
+
+        return memoised_situations[situation]
+
+    def find_all_complexities( door_keypad_codes, num_directional_keypads ):
+        stats_by_code = {}
+        for code in door_keypad_codes:
+            code_str = ''.join(code)
+            shortest_sequence_length = recursively_find_shortest_sequence_length_for_code( code, num_directional_keypads )
+            code_int = int(code_str.split('A')[0])
+            complexity = shortest_sequence_length * code_int
+            stats_by_code[code_str] = {
+                'code': code,
+                'code_int': code_int,
+                'shortest_sequence_length': shortest_sequence_length,
+                'complexity': complexity,
+            }
+
+        complexities = [ s['complexity'] for s in list(stats_by_code.values())]
+        sum_of_complexities = sum(complexities)
+        return sum_of_complexities, stats_by_code
+
     door_keypad_codes = get_char_yx_array_from_input( instance['input'] )
     num_directional_keypads = int(instance['num_directional_keypads'])
 
-    full_sequences_for_output_codes, sum_of_complexities, complexities_by_output_code_str = daisy_chain_keypads( door_keypad_codes, num_directional_keypads )
+    # full_sequences_for_output_codes, sum_of_complexities, complexities_by_output_code_str = daisy_chain_keypads( door_keypad_codes, num_directional_keypads )
 
-    pprint.pp( complexities_by_output_code_str )
-
+    # pprint.pp( complexities_by_output_code_str )
+    
     # keypad_experiment( door_keypad_codes )
     # keypad_experiment( [['^', '<', '^', '<', 'A']] )
+
+    sum_of_complexities, stats_by_code = find_all_complexities( door_keypad_codes, num_directional_keypads )
+    # pprint.pp( stats_by_code )
+    # print(f"DEBUG: len(memoised_situations)={len(memoised_situations)}")
 
     return {
         'sum_of_complexities': sum_of_complexities
@@ -292,8 +419,8 @@ def run():
 if __name__ == "__main__":
     run()
 
-# AOC 2024: 2025-01-02: day21/puzzle1/..
-# {'029A': 1972, '980A': 58800, '179A': 12172, '456A': 29184, '379A': 24256}
-# {'319A': 22330, '670A': 45560, '349A': 25128, '964A': 69408, '586A': 39848}
-# [{'elapsed_time_s': 6.914480000035837},
-#  {'sum_of_complexities': 202274, 'elapsed_time_s': 99.75852120807394}]
+# AOC 2024: 2025-01-06: day21/puzzle2/..
+# [{'elapsed_time_s': 0.00044150021858513355},
+#  {'elapsed_time_s': 0.0007987080607563257},
+#  {'sum_of_complexities': 245881705840972,
+#   'elapsed_time_s': 0.0035173750948160887}]
