@@ -32,6 +32,11 @@ def get_array_of_strings_from_input( arg ):
     arr = str.split('\n')
     return arr 
 
+def get_array_of_ints_from_input( arg ):
+    strs = get_array_of_strings_from_input( arg )
+    ints = [int(s) for s in strs]
+    return ints
+
 def get_char_yx_array_from_input( arg ):
     # char_2d_array[y][x] = char
     
@@ -224,6 +229,12 @@ class TestUtils(unittest.TestCase):
     def test_my_distinct_permutations( self ):
         self.assertEqual( my_distinct_permutations( [1,1] ), [(1,1)] )
         self.assertEqual( len(my_distinct_permutations( [1,1,2] )), 3 )
+
+    def test_get_array_of_ints_from_input( self ):
+        str = '''\
+123
+456'''
+        self.assertEqual( get_array_of_ints_from_input(str), [123,456])
 
 if __name__ == "__main__":
     unittest.main()
