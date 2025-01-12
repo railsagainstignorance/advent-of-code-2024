@@ -26,6 +26,8 @@ x01 XOR y01 -> z01
 x02 OR y02 -> z02''',
         'z_binary_str': '100', 
         'z_decimal': 4,
+        'swaps': [],
+        'swapped_z_binary_str': '100'
     }, 
     {        
         'input': '''\
@@ -48,8 +50,10 @@ x02 AND y02 -> z01
 x03 AND y03 -> z03
 x04 AND y04 -> z04
 x05 AND y05 -> z00''',
-        'z_binary_str': '010101', # 010101 AND 001101 = 010101
-        'z_decimal': 4,
+        'z_binary_str': '001001', 
+        'z_decimal': 9,
+        'swaps': [('z05', 'z00'), ('z02', 'z01')],
+        'swapped_z_binary_str': '101000' # 101010 AND 101100 = 101000
     }, 
     {   
         'input': '''\
@@ -102,6 +106,8 @@ tgd XOR rvg -> z12
 tnw OR pbm -> gnj''',
         'z_binary_str': '0011111101000', 
         'z_decimal': 2024,
+        'swaps': [],
+        'swapped_z_binary_str': '0011111101000'
     },    
     # {
     #     'input': "../puzzle1/input.txt",
@@ -111,6 +117,7 @@ tnw OR pbm -> gnj''',
 attrs = [
     'z_binary_str',
     'z_decimal',
+    'swapped_z_binary_str'
     ]
 
 def solve( instance ):
@@ -141,7 +148,20 @@ def solve( instance ):
             else:
                 pass
 
-        return initial_values_by_name, connections_by_output
+        return initial_values_by_name, sort_dict(connections_by_output)
+
+    def do_op( op: str, v1:int, v2:int ):
+        if op == 'AND':
+            value = v1 & v2
+        elif op == 'OR':
+            value = v1 | v2
+        elif op == 'XOR':
+            value = v1 ^ v2
+        elif op == 'SUM':
+            value = v1 + v2
+        else:
+            raise f"unknown op={op}"
+        return value
 
     def pull_output_values( initial_values_by_name, connections_by_output ):
         all_values_by_name = initial_values_by_name.copy()
@@ -162,14 +182,16 @@ def solve( instance ):
                 # OR gates output 1 if one or both inputs is 1; if both inputs are 0, these gates output 0.
                 # XOR gates output 1 if the inputs are different; if the inputs are the same, these gates output 0.
 
-                if op == 'AND':
-                    value = n1_value & n2_value
-                elif op == 'OR':
-                    value = n1_value | n2_value
-                elif op == 'XOR':
-                    value = n1_value ^ n2_value
-                else:
-                    raise f"unknown op={op}"
+                # if op == 'AND':
+                #     value = n1_value & n2_value
+                # elif op == 'OR':
+                #     value = n1_value | n2_value
+                # elif op == 'XOR':
+                #     value = n1_value ^ n2_value
+                # else:
+                #     raise f"unknown op={op}"
+
+                value = do_op( op, n1_value, n2_value )
 
                 all_values_by_name[output_name] = value
 
@@ -267,6 +289,7 @@ def solve( instance ):
         return lines
 
     def explore_graph( connections_by_output: dict[str,str], nodes: list[str]=None ):
+        print('|------')
 
         if nodes == None:
             z_names = sorted( [name for name in connections_by_output if name.startswith('z')], reverse=True)
@@ -275,7 +298,15 @@ def solve( instance ):
         for node in nodes:
             lines = recurse_graph_node( connections_by_output, node )
             str = "\n".join(lines)
-            print( f"graph({node}):\n{str}")
+            print( f"graph({node}):\n{str}\n---")
+
+    def swap_and_pull_output_values( initial_values_by_name, connections_by_output, swaps ):
+        ccbo = connections_by_output.copy()
+        for swap in swaps:
+            n1, n2 = swap
+            ccbo[n1], ccbo[n2] = ccbo[n2], ccbo[n1]
+        
+        return pull_output_values( initial_values_by_name, ccbo )
 
 
     #--- eof defs
@@ -290,9 +321,19 @@ def solve( instance ):
     # node = 'z00'
     explore_graph( connections_by_output )
 
+    swaps = None
+    if 'swaps' in instance:
+        swaps = instance['swaps']
+    else:
+        # find swaps, but none for now
+        swaps = []
+
+    swapped_z_binary_str, swapped_z_decimal = swap_and_pull_output_values( initial_values_by_name, connections_by_output, swaps )
+
     return {
         'z_binary_str': z_binary_str,
         'z_decimal': z_decimal,
+        'swapped_z_binary_str': swapped_z_binary_str
     }
 
 def run():
