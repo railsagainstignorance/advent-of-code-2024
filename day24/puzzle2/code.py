@@ -109,9 +109,10 @@ tnw OR pbm -> gnj''',
         'swaps': [],
         'swapped_z_binary_str': '0011111101000'
     },    
-    # {
-    #     'input': "../puzzle1/input.txt",
-    # },
+    {
+        'input': "../puzzle1/input.txt",
+        'swaps': [('z09', 'hnd'), ('z16','tdv'), ('z23', 'bks'), ('tjp', 'nrn')],
+    },
 ]
 
 attrs = [
@@ -275,6 +276,26 @@ def solve( instance ):
             lines = [ node ]
         else:
             n1, n2, op = connections_by_output[node]
+
+            switch_n1_n2 = False
+            if not n1 in connections_by_output and not n2 in connections_by_output:
+                if n2 < n1:
+                    switch_n1_n2 = True
+            elif not n1 in connections_by_output:
+                switch_n1_n2 = True
+            elif not n2 in connections_by_output:
+                pass
+            elif connections_by_output[n2][2] < connections_by_output[n1][2]:
+                switch_n1_n2 = True
+            elif connections_by_output[n2][2] > connections_by_output[n1][2]:
+                pass
+            elif not connections_by_output[n1][0] in connections_by_output and connections_by_output[n2][0] in connections_by_output:
+                switch_n1_n2 = True
+        
+
+            if switch_n1_n2:
+                n1,n2 = n2,n1
+
             n1_lines = recurse_graph_node( connections_by_output, n1, depth+1)
             n2_lines = recurse_graph_node( connections_by_output, n2, depth+1)
             # lines = [(node_depth_spacing * depth) + op] + n1_lines + n2_lines
@@ -300,14 +321,18 @@ def solve( instance ):
             str = "\n".join(lines)
             print( f"graph({node}):\n{str}\n---")
 
-    def swap_and_pull_output_values( initial_values_by_name, connections_by_output, swaps ):
+    def do_swaps( connections_by_output, swaps ):
         ccbo = connections_by_output.copy()
         for swap in swaps:
             n1, n2 = swap
             ccbo[n1], ccbo[n2] = ccbo[n2], ccbo[n1]
+
+        return ccbo
+
+    def swap_and_pull_output_values( initial_values_by_name, connections_by_output, swaps ):
+        ccbo = do_swaps( connections_by_output, swaps  )
         
         return pull_output_values( initial_values_by_name, ccbo )
-
 
     #--- eof defs
 
@@ -319,11 +344,13 @@ def solve( instance ):
     # generate_and_plot_graph( connections_by_output )
 
     # node = 'z00'
-    explore_graph( connections_by_output )
 
     swaps = None
     if 'swaps' in instance:
         swaps = instance['swaps']
+        ccbo = do_swaps( connections_by_output, swaps )
+        print( f"DEBUG: swaps={swaps}")
+        explore_graph( ccbo )
     else:
         # find swaps, but none for now
         swaps = []
@@ -348,9 +375,11 @@ def run():
 if __name__ == "__main__":
     run()
 
-# AOC 2024: 2025-01-06: day24/puzzle1/..
-# [{'elapsed_time_s': 1.8416903913021088e-05},
-#  {'elapsed_time_s': 4.087504930794239e-05},
-#  {'z_binary_str': '1100000110000001011000011000110000100011100110',
-#   'z_decimal': 53190357879014,
-#   'elapsed_time_s': 0.00039445795118808746}]
+# notes:
+#
+# z09 (is AND, should XOR), hnd (is XOR, should AND)
+# z16 (is OR, should XOR), tdv (is XOR, should OR)
+# z23 (is AND, should XOR), bks (is XOR, should be AND)
+# tjp (is AND, should XOR), nrn (is XOR, should AND)
+
+# bks,hnd,nrn,tdv,tjp,z09,z16,z23 <- correct !!!
